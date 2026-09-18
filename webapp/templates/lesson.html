@@ -1,0 +1,1049 @@
+{% extends "base.html" %}
+
+{% block title %}Lesson Player - CombinedMaths Player{% endblock %}
+
+{% block content %}
+<div class="lesson-container">
+    <div class="page-header">
+        <a href="#" onclick="goBack()" class="back-link">← Back</a>
+        <h1 id="lesson-title">Loading lesson...</h1>
+    </div>
+    
+    <div id="lesson-loading" class="loading-spinner">
+        <div class="spinner"></div>
+        <p>Preparing lesson...</p>
+    </div>
+    
+    <div id="lesson-error" class="error-message hidden"></div>
+
+    <div id="player-container" class="player-container hidden">
+        <div class="video-wrapper">
+            <video id="video-player" controls autoplay class="video-player"></video>
+        </div>
+
+        <div class="player-controls">
+            <label class="watched-toggle-player">
+                <input type="checkbox" id="watched-checkbox" onchange="onWatchedToggle(this.checked)">
+                Mark as watched
+            </label>
+            <div class="quality-control">
+                <label for="quality-select">Quality:</label>
+                <select id="quality-select">
+                    <option value="auto">Auto</option>
+                </select>
+            </div>
+            <div class="speed-control">
+                <label for="speed-slider">Speed: <span id="speed-value">1.0x</span></label>
+                <input type="range" id="speed-slider" min="0.5" max="4" step="0.05" value="1">
+            </div>
+            <button id="download-btn" class="btn btn-secondary">Download Lesson</button>
+            <button id="add-timestamp-btn" class="btn btn-secondary">Add Timestamp</button>
+        </div>
+
+        <div id="download-progress" class="download-progress hidden">
+            <div class="progress-container">
+                <div class="progress-bar">
+                    <div id="download-progress-fill" class="progress-fill"></div>
+                </div>
+                <div class="progress-controls">
+                    <div id="download-progress-text" class="progress-text">Starting download...</div>
+                    <button id="cancel-download-btn" class="btn btn-danger btn-sm">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="timestamps-container" class="timestamps-container hidden">
+            <h3>Timestamps</h3>
+            <div id="timestamps-list" class="timestamps-list"></div>
+        </div>
+    </div>
+
+    <div id="file-container" class="file-container hidden">
+        <!-- Attachment tabs (visible only when the card has > 1 file) -->
+        <div id="file-tabs" class="file-tabs hidden"></div>
+
+        <div class="file-viewer">
+            <div class="file-placeholder" id="file-placeholder">
+                <p>Loading file...</p>
+            </div>
+            <iframe id="file-frame" class="file-frame" title="Lesson file"></iframe>
+        </div>
+
+        <div class="player-controls">
+            <button id="download-file-btn" class="btn btn-secondary">Download File</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script>
+<script>
+const lessonId = '{{ lesson_id }}';
+let playbackUrl = null;
+let availableQualities = [];
+let currentQuality = 'auto';
+let timestamps = [];
+let lessonContentType = 'video'; // 'video' or 'file' (PDF/document)
+let activeFileIndex = 0;       // index into the file-list for multi-file cards
+let lessonFiles = [];           // [{index, title, filename}, ...] from /files
+
+function goBack() {
+    if (document.referrer) {
+        window.history.back();
+    } else {
+        window.location.href = '/courses';
+    }
+}
+
+function onWatchedToggle(checked) {
+    CombinedMathsPlayer.setLessonWatched(lessonId, checked);
+}
+
+function initWatchedCheckbox() {
+    // Only the video container has a single checkbox; the file container
+    // uses a per-file read list (renderFileReadList) instead.
+    const v = document.getElementById('watched-checkbox');
+    if (v) v.checked = CombinedMathsPlayer.isLessonWatched(lessonId);
+}
+
+function onFileReadToggle(fileIndex, checked) {
+    CombinedMathsPlayer.setFileRead(lessonId, fileIndex, checked);
+    // Lesson-level "watched" is derived: all files read → lesson watched.
+    const all = lessonFiles.length > 0
+        ? lessonFiles.every(f => CombinedMathsPlayer.isFileRead(lessonId, f.index))
+        : checked;
+    CombinedMathsPlayer.setLessonWatched(lessonId, all);
+}
+
+async function loadLessonDetails() {
+    const loadingDiv = document.getElementById('lesson-loading');
+    const errorDiv = document.getElementById('lesson-error');
+    const lessonTitle = document.getElementById('lesson-title');
+
+    try {
+        const response = await fetch(`/api/lesson/${lessonId}/details`);
+        const data = await response.json();
+
+        if (response.ok) {
+            if (data.lesson) {
+                lessonTitle.textContent = data.lesson.title || 'Untitled Lesson';
+                // Backend adds content_type to lesson details: 'video' (HLS)
+                // or 'file' (PDF, document, image, ...). File lessons
+                // skip the whole prepare/HLS path.
+                lessonContentType = data.lesson.content_type || 'video';
+            }
+
+            loadingDiv.classList.add('hidden');
+
+            if (lessonContentType === 'file') {
+                document.getElementById('file-container').classList.remove('hidden');
+                initFileViewer();
+            } else {
+                document.getElementById('player-container').classList.remove('hidden');
+                // Auto-prepare the lesson
+                await prepareLesson();
+                // Timestamps only apply to videos.
+                loadTimestamps();
+            }
+        } else {
+            loadingDiv.classList.add('hidden');
+            errorDiv.textContent = data.error || 'Failed to load lesson details';
+            errorDiv.classList.remove('hidden');
+        }
+    } catch (error) {
+        loadingDiv.classList.add('hidden');
+        errorDiv.textContent = 'Network error. Please try again.';
+        errorDiv.classList.remove('hidden');
+    }
+}
+
+// Wire up the file viewer (PDFs, images, etc.) for non-video lessons.
+// Fetches the list of attachments up front so multi-file cards get a
+// tab bar instead of silently showing only the first file.
+async function initFileViewer() {
+    const frame = document.getElementById('file-frame');
+    const placeholder = document.getElementById('file-placeholder');
+    const downloadBtn = document.getElementById('download-file-btn');
+    const tabsContainer = document.getElementById('file-tabs');
+
+    // Hide the placeholder each time the iframe finishes loading (covers
+    // the initial load and any tab switch).
+    frame.addEventListener('load', () => {
+        if (placeholder) placeholder.classList.add('hidden');
+    });
+
+    // Fetch the full attachment list so we know whether to show tabs
+    try {
+        const resp = await fetch(`/api/lesson/${lessonId}/files`);
+        const data = await resp.json();
+        lessonFiles = (data && data.files) ? data.files : [];
+    } catch (_) {
+        lessonFiles = [];
+    }
+
+    activeFileIndex = 0;
+
+    // Always show the tab bar — each tab carries its own "read" checkbox
+    // next to the file name (falls back to a single index-0 toggle if the
+    // files list didn't load), then load the first file.
+    renderFileTabs(tabsContainer);
+    if (tabsContainer) tabsContainer.classList.remove('hidden');
+    loadFileAtIndex(activeFileIndex);
+
+    if (downloadBtn) {
+        downloadBtn.onclick = () => {
+            window.location.href =
+                `/api/lesson/${lessonId}/file?index=${activeFileIndex}&download=1`;
+        };
+    }
+}
+
+// Render a tab (with its read checkbox) per attachment in the card.
+// The checkbox toggles that file's read state without switching tabs.
+function renderFileTabs(container) {
+    if (!container) return;
+    container.innerHTML = '';
+    const files = lessonFiles.length ? lessonFiles : [{ index: 0, title: 'File' }];
+    files.forEach((file, i) => {
+        const item = document.createElement('div');
+        item.className = 'file-tab-item' + (i === activeFileIndex ? ' active' : '');
+
+        const read = document.createElement('label');
+        read.className = 'file-tab-read';
+        read.title = 'Mark as read';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox';
+        cb.checked = CombinedMathsPlayer.isFileRead(lessonId, file.index);
+        cb.addEventListener('click', (e) => e.stopPropagation());
+        cb.addEventListener('change', () => onFileReadToggle(file.index, cb.checked));
+        read.appendChild(cb);
+
+        const tab = document.createElement('button');
+        tab.className = 'file-tab';
+        tab.textContent = file.title || `File ${i + 1}`;
+        tab.addEventListener('click', () => {
+            if (i === activeFileIndex) return;
+            activeFileIndex = i;
+            // Update active state on all tab items
+            container.querySelectorAll('.file-tab-item').forEach((t, j) => {
+                t.classList.toggle('active', j === i);
+            });
+            // Show the placeholder again while the new iframe loads
+            const placeholder = document.getElementById('file-placeholder');
+            if (placeholder) placeholder.classList.remove('hidden');
+            loadFileAtIndex(i);
+        });
+
+        item.append(read, tab);
+        container.appendChild(item);
+    });
+}
+
+// Point the iframe at a specific attachment index.
+function loadFileAtIndex(index) {
+    const frame = document.getElementById('file-frame');
+    if (!frame) return;
+    frame.src = `/api/lesson/${lessonId}/file?index=${index}`;
+}
+
+async function prepareLesson() {
+    const errorDiv = document.getElementById('lesson-error');
+
+    try {
+        const response = await fetch(`/api/lesson/${lessonId}/prepare`, {
+            method: 'POST'
+        });
+        const data = await response.json();
+
+        if (response.ok && data.success) {
+            playbackUrl = `/api/proxy/playback`;
+            await fetchAvailableQualities();
+            initializePlayer();
+            return;
+        }
+
+        // Prepare can fail because the lesson is actually a file (PDF,
+        // document) and the vendor's HLS path doesn't apply. The backend's
+        // lesson_type string is reverse-engineered and may not match what
+        // the vendor returns for *this* lesson, so we can't fully trust
+        // the first-pass classifier. Probe the file endpoint to confirm
+        // and self-correct.
+        const isFile = await probeFileEndpoint();
+        if (isFile) {
+            document.getElementById('player-container').classList.add('hidden');
+            document.getElementById('file-container').classList.remove('hidden');
+            initFileViewer();
+            return;
+        }
+
+        errorDiv.textContent = data.error || 'Failed to prepare lesson';
+        errorDiv.classList.remove('hidden');
+    } catch (error) {
+        // Network error during prepare: still try the file probe — the
+        // prepare call may have failed because the lesson isn't a video
+        // at all, in which case the file endpoint (which is its own
+        // authenticated request) may still work.
+        const isFile = await probeFileEndpoint();
+        if (isFile) {
+            document.getElementById('player-container').classList.add('hidden');
+            document.getElementById('file-container').classList.remove('hidden');
+            initFileViewer();
+            return;
+        }
+        errorDiv.textContent = 'Network error. Please try again.';
+        errorDiv.classList.remove('hidden');
+    }
+}
+
+// Quick check: does /api/lesson/<id>/file return a usable response?
+//   200 → it's a file lesson; the backend can stream it.
+//   400 → backend says it's a video; the prepare error is the real story.
+//   502/500 → couldn't tell either way; let the prepare error stand.
+async function probeFileEndpoint() {
+    try {
+        const r = await fetch(`/api/lesson/${lessonId}/file?probe=1`, {
+            credentials: 'same-origin',
+        });
+        return r.ok;
+    } catch (e) {
+        return false;
+    }
+}
+
+async function fetchAvailableQualities() {
+    try {
+        const response = await fetch(`/api/lesson/${lessonId}/qualities`);
+        const data = await response.json();
+        
+        if (response.ok && data.qualities) {
+            availableQualities = data.qualities;
+            populateQualitySelector();
+        }
+    } catch (error) {
+        console.error('Failed to fetch qualities:', error);
+    }
+}
+
+function populateQualitySelector() {
+    const select = document.getElementById('quality-select');
+    select.innerHTML = '<option value="auto">Auto</option>';
+    
+    // Create a copy reversed for display (highest quality first for better UX)
+    const displayQualities = [...availableQualities].reverse();
+    
+    displayQualities.forEach(quality => {
+        const option = document.createElement('option');
+        option.value = quality.id;
+        option.textContent = quality.label;
+        select.appendChild(option);
+    });
+    
+    select.addEventListener('change', (e) => {
+        currentQuality = e.target.value;
+        applyQuality();
+        // Reset auto option text when switching to manual
+        if (currentQuality !== 'auto') {
+            const autoOption = select.querySelector('option[value="auto"]');
+            if (autoOption) {
+                autoOption.textContent = 'Auto';
+            }
+        }
+    });
+}
+
+function applyQuality() {
+    const video = document.getElementById('video-player');
+    const select = document.getElementById('quality-select');
+    
+    if (video.hls) {
+        if (currentQuality === 'auto') {
+            video.hls.currentLevel = -1; // Auto quality
+            // Reset auto option text initially
+            const autoOption = select.querySelector('option[value="auto"]');
+            if (autoOption) {
+                autoOption.textContent = 'Auto';
+            }
+        } else {
+            // Find the quality in the original array (sorted lowest to highest for HLS.js)
+            const levelIndex = availableQualities.findIndex(q => q.id === currentQuality);
+            if (levelIndex !== -1) {
+                video.hls.currentLevel = levelIndex;
+            }
+        }
+    }
+}
+
+function setupSpeedControl() {
+    const video = document.getElementById('video-player');
+    const slider = document.getElementById('speed-slider');
+    const label = document.getElementById('speed-value');
+
+    slider.addEventListener('input', () => {
+        const rate = parseFloat(slider.value);
+        video.playbackRate = rate;
+        label.textContent = `${rate.toFixed(2)}x`;
+    });
+
+    // Keep the label/slider correct if playbackRate is ever changed elsewhere
+    video.addEventListener('ratechange', () => {
+        label.textContent = `${video.playbackRate.toFixed(2)}x`;
+        slider.value = video.playbackRate;
+    });
+}
+
+function setupKeyboardControls() {
+    const video = document.getElementById('video-player');
+    if (!video) return;
+
+    // Match the slider's granularity so keyboard and slider stay in lockstep
+    const SPEED_STEP = 0.05;
+    const SPEED_MIN = 0.5;
+    const SPEED_MAX = 4;
+    // Round to the slider's 2-decimal precision to avoid drift (e.g. 1.0500000000000003)
+    const quantize = (rate) => Math.round(rate * 100) / 100;
+
+    document.addEventListener('keydown', (e) => {
+        // Don't hijack typing in form controls or contenteditable surfaces
+        const target = e.target;
+        const tag = (target && target.tagName ? target.tagName : '').toLowerCase();
+        if (tag === 'input' || tag === 'textarea' || tag === 'select' || (target && target.isContentEditable)) {
+            return;
+        }
+        // Ignore modified key combos (Cmd/Ctrl/Alt + key) so we don't break
+        // browser shortcuts like Cmd+F (find) or Ctrl+Arrow (jump word).
+        if (e.metaKey || e.ctrlKey || e.altKey) {
+            return;
+        }
+
+        switch (e.key) {
+            case ' ':
+            case 'Spacebar': // legacy
+                e.preventDefault();
+                if (video.paused) {
+                    video.play().catch(() => { /* autoplay rejection: ignore */ });
+                } else {
+                    video.pause();
+                }
+                break;
+            case 'f':
+            case 'F':
+                e.preventDefault();
+                if (document.fullscreenElement) {
+                    document.exitFullscreen().catch(() => {});
+                } else if (video.requestFullscreen) {
+                    video.requestFullscreen().catch(() => {});
+                } else if (video.webkitRequestFullscreen) {
+                    video.webkitRequestFullscreen();
+                } else if (video.msRequestFullscreen) {
+                    video.msRequestFullscreen();
+                }
+                break;
+            case 'ArrowUp':
+                e.preventDefault();
+                video.playbackRate = quantize(Math.min(SPEED_MAX, video.playbackRate + SPEED_STEP));
+                // The 'ratechange' listener in setupSpeedControl syncs slider + label
+                break;
+            case 'ArrowDown':
+                e.preventDefault();
+                video.playbackRate = quantize(Math.max(SPEED_MIN, video.playbackRate - SPEED_STEP));
+                break;
+            case 't':
+            case 'T':
+                e.preventDefault();
+                openTimestampAddModal();
+                break;
+        }
+    });
+}
+
+// How often (ms) to persist the current playback position while playing
+const POSITION_SAVE_INTERVAL_MS = 5000;
+let positionSaveTimer = null;
+
+function formatTime(seconds) {
+    seconds = Math.max(0, Math.floor(seconds || 0));
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+function setupResumePlayback() {
+    const video = document.getElementById('video-player');
+    const resumeSeconds = CombinedMathsPlayer.getVideoPosition(lessonId);
+
+    if (resumeSeconds > 0) {
+        // Seek once metadata is available (needed before currentTime can be set)
+        const seekToSaved = () => {
+            video.currentTime = resumeSeconds;
+            const errorDiv = document.getElementById('lesson-error');
+            errorDiv.textContent = `Resuming from ${formatTime(resumeSeconds)}`;
+            errorDiv.classList.remove('hidden');
+            // This is an informational notice, not a real error — clear it
+            // shortly so it doesn't sit there looking like a problem.
+            setTimeout(() => errorDiv.classList.add('hidden'), 4000);
+        };
+        if (video.readyState >= 1) {
+            seekToSaved();
+        } else {
+            video.addEventListener('loadedmetadata', seekToSaved, { once: true });
+        }
+    }
+
+    // Persist position periodically while playing, not on every timeupdate
+    if (positionSaveTimer) clearInterval(positionSaveTimer);
+    positionSaveTimer = setInterval(() => {
+        if (!video.paused && !video.seeking && video.currentTime > 0) {
+            CombinedMathsPlayer.setVideoPosition(lessonId, video.currentTime, video.duration);
+        }
+    }, POSITION_SAVE_INTERVAL_MS);
+
+    // Also save on pause and when navigating away, so a quick pause-and-close
+    // isn't lost waiting for the next interval tick
+    video.addEventListener('pause', () => {
+        CombinedMathsPlayer.setVideoPosition(lessonId, video.currentTime, video.duration);
+    });
+    window.addEventListener('beforeunload', () => {
+        CombinedMathsPlayer.setVideoPosition(lessonId, video.currentTime, video.duration);
+    });
+
+    // Once the lesson is finished, clear the saved position so it starts
+    // from the beginning next time instead of resuming at the very end
+    video.addEventListener('ended', () => {
+        if (positionSaveTimer) clearInterval(positionSaveTimer);
+        CombinedMathsPlayer.clearVideoPosition(lessonId);
+    });
+}
+
+function initializePlayer() {
+    const video = document.getElementById('video-player');
+    
+    if (Hls.isSupported()) {
+        const hls = new Hls();
+        video.hls = hls; // Store HLS instance for quality control
+        hls.loadSource(playbackUrl);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, function() {
+            video.play();
+            // Apply initial quality selection
+            if (currentQuality !== 'auto') {
+                applyQuality();
+            }
+            // Set up quality change monitoring for auto mode
+            setupQualityMonitoring(hls);
+        });
+    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = playbackUrl;
+        video.addEventListener('loadedmetadata', function() {
+            video.play();
+        });
+    } else {
+        document.getElementById('lesson-error').textContent = 
+            'Your browser does not support HLS playback. Please try a different browser.';
+        document.getElementById('lesson-error').classList.remove('hidden');
+    }
+
+    setupSpeedControl();
+    setupResumePlayback();
+    setupKeyboardControls();
+}
+
+function setupQualityMonitoring(hls) {
+    const select = document.getElementById('quality-select');
+    
+    // Update auto option text when quality changes
+    const updateAutoText = () => {
+        if (select.value === 'auto' && hls.autoLevelEnabled && hls.currentLevel >= 0) {
+            updateAutoOptionText(hls.currentLevel);
+        }
+    };
+    
+    hls.on(Hls.Events.LEVEL_SWITCHED, updateAutoText);
+    hls.on(Hls.Events.FRAG_LOADING, updateAutoText);
+    
+    // Initial update
+    updateAutoText();
+}
+
+function updateAutoOptionText(levelIndex) {
+    const select = document.getElementById('quality-select');
+    const autoOption = select.querySelector('option[value="auto"]');
+    
+    if (levelIndex >= 0 && levelIndex < availableQualities.length) {
+        const quality = availableQualities[levelIndex];
+        autoOption.textContent = `Auto (${quality.label})`;
+    } else {
+        autoOption.textContent = 'Auto';
+    }
+}
+
+// Global variables for download intervals
+let downloadProgressInterval = null;
+let downloadSimulationInterval = null;
+let currentLessonId = null;
+
+async function downloadLesson() {
+    // Ask for download quality
+    const downloadQuality = await promptForDownloadQuality();
+    if (!downloadQuality) {
+        return; // User cancelled
+    }
+    
+    currentLessonId = lessonId;
+    const downloadBtn = document.getElementById('download-btn');
+    const errorDiv = document.getElementById('lesson-error');
+    const progressDiv = document.getElementById('download-progress');
+    const progressFill = document.getElementById('download-progress-fill');
+    const progressText = document.getElementById('download-progress-text');
+    
+    // Clear any existing intervals
+    if (downloadProgressInterval) clearInterval(downloadProgressInterval);
+    if (downloadSimulationInterval) clearInterval(downloadSimulationInterval);
+    
+    downloadBtn.disabled = true;
+    downloadBtn.textContent = 'Starting download...';
+    errorDiv.classList.add('hidden');
+    progressDiv.classList.remove('hidden');
+    if (progressFill) progressFill.style.width = '0%';
+    if (progressText) progressText.textContent = 'Starting download...';
+    
+    try {
+        // Start polling for progress first
+        downloadProgressInterval = setInterval(async () => {
+            try {
+                console.log('Checking progress for lesson:', lessonId);
+                const progressResponse = await fetch(`/api/lesson/${lessonId}/download/progress`);
+                const progressData = await progressResponse.json();
+                console.log('Progress data:', progressData);
+                
+                if (progressData.status === 'error') {
+                    clearInterval(downloadProgressInterval);
+                    if (downloadSimulationInterval) clearInterval(downloadSimulationInterval);
+                    errorDiv.textContent = progressData.message || 'Download failed';
+                    errorDiv.classList.remove('hidden');
+                    progressDiv.classList.add('hidden');
+                    downloadBtn.disabled = false;
+                    downloadBtn.textContent = 'Download Lesson';
+                    return;
+                }
+                
+                // Update progress bar
+                const progress = progressData.progress || 0;
+                console.log('Updating progress:', progress, progressData.message);
+                if (progressFill) progressFill.style.width = `${progress}%`;
+                if (progressText) progressText.textContent = progressData.message || `Downloading... ${progress}%`;
+                
+                if (progressData.status === 'completed' || progressData.status === 'sending') {
+                    clearInterval(downloadProgressInterval);
+                    if (downloadSimulationInterval) clearInterval(downloadSimulationInterval);
+                    if (progressText) progressText.textContent = 'Download complete! Saving file...';
+                }
+            } catch (e) {
+                console.error('Progress check error:', e);
+            }
+        }, 500); // Poll every 500ms for more responsive updates
+        
+        // Simulate progress while waiting for actual response
+        let simulatedProgress = 5;
+        downloadSimulationInterval = setInterval(() => {
+            if (simulatedProgress < 50) {
+                simulatedProgress += 5;
+                if (progressFill) progressFill.style.width = `${simulatedProgress}%`;
+                if (progressText) progressText.textContent = `Preparing download... ${simulatedProgress}%`;
+            } else {
+                clearInterval(downloadSimulationInterval);
+                downloadSimulationInterval = null;
+            }
+        }, 500);
+        
+        // Setup cancel button
+        const cancelBtn = document.getElementById('cancel-download-btn');
+        if (cancelBtn) {
+            cancelBtn.onclick = async () => {
+                try {
+                    const response = await fetch(`/api/lesson/${lessonId}/download/cancel`, {
+                        method: 'POST'
+                    });
+                    if (response.ok) {
+                        // Clear intervals
+                        if (downloadProgressInterval) clearInterval(downloadProgressInterval);
+                        if (downloadSimulationInterval) clearInterval(downloadSimulationInterval);
+                        
+                        // Reset UI
+                        progressDiv.classList.add('hidden');
+                        downloadBtn.disabled = false;
+                        downloadBtn.textContent = 'Download Lesson';
+                        currentLessonId = null;
+                    }
+                } catch (e) {
+                    console.error('Cancel error:', e);
+                }
+            };
+        }
+        
+        // Start the download after progress polling is set up
+        const downloadResponse = await fetch(`/api/lesson/${lessonId}/download`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ quality: downloadQuality })
+        });
+        
+        if (!downloadResponse.ok) {
+            const data = await downloadResponse.json();
+            clearInterval(downloadProgressInterval);
+            if (downloadSimulationInterval) clearInterval(downloadSimulationInterval);
+            errorDiv.textContent = data.error || 'Failed to start download';
+            errorDiv.classList.remove('hidden');
+            progressDiv.classList.add('hidden');
+            downloadBtn.disabled = false;
+            downloadBtn.textContent = 'Download Lesson';
+            return;
+        }
+        
+        // Wait for the download to complete
+        const contentType = downloadResponse.headers.get('Content-Type') || 'video/mp4';
+        const extension = contentType.includes('mp4') ? '.mp4' : '.ts';
+        
+        const blob = await downloadResponse.blob();
+        if (downloadProgressInterval) clearInterval(downloadProgressInterval);
+        if (downloadSimulationInterval) clearInterval(downloadSimulationInterval);
+        
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `${lessonId}${extension}`;
+        document.body.appendChild(a);
+        a.click();
+        window.URL.revokeObjectURL(url);
+        document.body.removeChild(a);
+        
+        progressDiv.classList.add('hidden');
+        downloadBtn.textContent = 'Download Complete';
+        setTimeout(() => {
+            downloadBtn.disabled = false;
+            downloadBtn.textContent = 'Download Lesson';
+        }, 3000);
+        
+    } catch (error) {
+        console.error('Download error:', error);
+        if (downloadProgressInterval) clearInterval(downloadProgressInterval);
+        if (downloadSimulationInterval) clearInterval(downloadSimulationInterval);
+        errorDiv.textContent = 'Network error. Please try again.';
+        errorDiv.classList.remove('hidden');
+        progressDiv.classList.add('hidden');
+        downloadBtn.disabled = false;
+        downloadBtn.textContent = 'Download Lesson';
+    }
+}
+
+async function promptForDownloadQuality() {
+    // If qualities are not available yet, fetch them
+    if (availableQualities.length === 0) {
+        await fetchAvailableQualities();
+    }
+    
+    // Create a simple modal for quality selection
+    // Display qualities in reverse order (highest to lowest) for better UX
+    const displayQualities = [...availableQualities].reverse();
+    
+    return new Promise((resolve) => {
+        const modal = document.createElement('div');
+        modal.className = 'quality-modal';
+        modal.innerHTML = `
+            <div class="quality-modal-content">
+                <h3>Select Download Quality</h3>
+                <div class="quality-options">
+                    ${displayQualities.map(q => `
+                        <button class="quality-option" data-quality="${q.id}">
+                            ${q.label}
+                        </button>
+                    `).join('')}
+                </div>
+                <button class="btn btn-secondary quality-cancel">Cancel</button>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        // Handle quality selection
+        modal.querySelectorAll('.quality-option').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const quality = btn.getAttribute('data-quality');
+                document.body.removeChild(modal);
+                resolve(quality);
+            });
+        });
+        
+        // Handle cancel
+        modal.querySelector('.quality-cancel').addEventListener('click', () => {
+            document.body.removeChild(modal);
+            resolve(null);
+        });
+        
+        // Close on background click
+        modal.addEventListener('click', (e) => {
+            if (e.target === modal) {
+                document.body.removeChild(modal);
+                resolve(null);
+            }
+        });
+    });
+}
+
+document.getElementById('download-btn').addEventListener('click', downloadLesson);
+
+// Timestamp management functions
+async function loadTimestamps() {
+    try {
+        const response = await fetch(`/api/lesson/${lessonId}/timestamps`);
+        const data = await response.json();
+        
+        if (response.ok && data.timestamps) {
+            timestamps = data.timestamps;
+            renderTimestamps();
+            if (timestamps.length > 0) {
+                document.getElementById('timestamps-container').classList.remove('hidden');
+            }
+        }
+    } catch (error) {
+        console.error('Failed to load timestamps:', error);
+    }
+}
+
+function renderTimestamps() {
+    const container = document.getElementById('timestamps-list');
+    container.innerHTML = '';
+    
+    // Sort timestamps by time
+    const sortedTimestamps = [...timestamps].sort((a, b) => a.time - b.time);
+    
+    sortedTimestamps.forEach(ts => {
+        const timestampEl = document.createElement('div');
+        timestampEl.className = 'timestamp-item';
+        timestampEl.style.borderColor = ts.color || '#7ab';
+        timestampEl.dataset.timestampId = ts.id;
+        timestampEl.dataset.time = ts.time;
+        
+        timestampEl.innerHTML = `
+            <div class="timestamp-time" style="color: ${ts.color || '#7ab'}">${formatTime(ts.time)}</div>
+            <div class="timestamp-note">${ts.note || 'No note'}</div>
+            <div class="timestamp-actions">
+                <button class="timestamp-edit btn-xs" data-id="${ts.id}">Edit</button>
+                <button class="timestamp-delete btn-xs btn-danger" data-id="${ts.id}">Delete</button>
+            </div>
+        `;
+        
+        // Click to seek to timestamp
+        timestampEl.addEventListener('click', (e) => {
+            if (!e.target.classList.contains('timestamp-edit') && !e.target.classList.contains('timestamp-delete')) {
+                const video = document.getElementById('video-player');
+                video.currentTime = ts.time;
+            }
+        });
+        
+        // Edit button
+        timestampEl.querySelector('.timestamp-edit').addEventListener('click', (e) => {
+            e.stopPropagation();
+            openTimestampEditModal(ts);
+        });
+        
+        // Delete button
+        timestampEl.querySelector('.timestamp-delete').addEventListener('click', (e) => {
+            e.stopPropagation();
+            deleteTimestamp(ts.id);
+        });
+        
+        container.appendChild(timestampEl);
+    });
+}
+
+function openTimestampAddModal() {
+    const video = document.getElementById('video-player');
+    const currentTime = video.currentTime;
+    
+    const modal = document.createElement('div');
+    modal.className = 'timestamp-modal';
+    modal.innerHTML = `
+        <div class="timestamp-modal-content">
+            <h3>Add Timestamp</h3>
+            <div class="timestamp-form">
+                <div class="form-group">
+                    <label>Time:</label>
+                    <input type="text" id="timestamp-time" value="${formatTime(currentTime)}" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="timestamp-note">Note:</label>
+                    <input type="text" id="timestamp-note" placeholder="Add a note..." maxlength="200">
+                </div>
+                <div class="form-group">
+                    <label for="timestamp-color">Color:</label>
+                    <input type="color" id="timestamp-color" value="#7ab">
+                </div>
+                <div class="timestamp-modal-buttons">
+                    <button id="timestamp-save" class="btn btn-primary">Save</button>
+                    <button id="timestamp-cancel" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Handle save
+    modal.querySelector('#timestamp-save').addEventListener('click', async () => {
+        const note = document.getElementById('timestamp-note').value.trim();
+        const color = document.getElementById('timestamp-color').value;
+        
+        try {
+            const response = await fetch(`/api/lesson/${lessonId}/timestamps`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    time: currentTime,
+                    note: note,
+                    color: color
+                })
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                timestamps = data.timestamps;
+                renderTimestamps();
+                document.getElementById('timestamps-container').classList.remove('hidden');
+                document.body.removeChild(modal);
+            } else {
+                const errorData = await response.json();
+                alert(errorData.error || 'Failed to add timestamp');
+            }
+        } catch (error) {
+            console.error('Failed to add timestamp:', error);
+            alert('Failed to add timestamp');
+        }
+    });
+    
+    // Handle cancel
+    modal.querySelector('#timestamp-cancel').addEventListener('click', () => {
+        document.body.removeChild(modal);
+    });
+    
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            document.body.removeChild(modal);
+        }
+    });
+}
+
+function openTimestampEditModal(timestamp) {
+    const modal = document.createElement('div');
+    modal.className = 'timestamp-modal';
+    modal.innerHTML = `
+        <div class="timestamp-modal-content">
+            <h3>Edit Timestamp</h3>
+            <div class="timestamp-form">
+                <div class="form-group">
+                    <label>Time:</label>
+                    <input type="text" id="timestamp-time" value="${formatTime(timestamp.time)}" readonly>
+                </div>
+                <div class="form-group">
+                    <label for="timestamp-note">Note:</label>
+                    <input type="text" id="timestamp-note" value="${timestamp.note || ''}" placeholder="Add a note..." maxlength="200">
+                </div>
+                <div class="form-group">
+                    <label for="timestamp-color">Color:</label>
+                    <input type="color" id="timestamp-color" value="${timestamp.color || '#7ab'}">
+                </div>
+                <div class="timestamp-modal-buttons">
+                    <button id="timestamp-save" class="btn btn-primary">Save</button>
+                    <button id="timestamp-cancel" class="btn btn-secondary">Cancel</button>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    // Handle save
+    modal.querySelector('#timestamp-save').addEventListener('click', async () => {
+        const note = document.getElementById('timestamp-note').value.trim();
+        const color = document.getElementById('timestamp-color').value;
+        
+        try {
+            const response = await fetch(`/api/lesson/${lessonId}/timestamps/${timestamp.id}`, {
+                method: 'PUT',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    note: note,
+                    color: color
+                })
+            });
+            
+            if (response.ok) {
+                const data = await response.json();
+                timestamps = data.timestamps;
+                renderTimestamps();
+                document.body.removeChild(modal);
+            } else {
+                const errorData = await response.json();
+                alert(errorData.error || 'Failed to update timestamp');
+            }
+        } catch (error) {
+            console.error('Failed to update timestamp:', error);
+            alert('Failed to update timestamp');
+        }
+    });
+    
+    // Handle cancel
+    modal.querySelector('#timestamp-cancel').addEventListener('click', () => {
+        document.body.removeChild(modal);
+    });
+    
+    // Close on background click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) {
+            document.body.removeChild(modal);
+        }
+    });
+}
+
+async function deleteTimestamp(timestampId) {
+    if (!confirm('Are you sure you want to delete this timestamp?')) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/lesson/${lessonId}/timestamps/${timestampId}`, {
+            method: 'DELETE'
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            timestamps = data.timestamps;
+            renderTimestamps();
+            if (timestamps.length === 0) {
+                document.getElementById('timestamps-container').classList.add('hidden');
+            }
+        } else {
+            const errorData = await response.json();
+            alert(errorData.error || 'Failed to delete timestamp');
+        }
+    } catch (error) {
+        console.error('Failed to delete timestamp:', error);
+        alert('Failed to delete timestamp');
+    }
+}
+
+// Add timestamp button event listener
+document.getElementById('add-timestamp-btn').addEventListener('click', openTimestampAddModal);
+
+// Load lesson details when page loads
+document.addEventListener('DOMContentLoaded', () => {
+    initWatchedCheckbox();
+    loadLessonDetails();
+    // Timestamps are loaded inside loadLessonDetails for video lessons
+    // (file lessons don't have a playhead to anchor them to).
+});
+</script>
+{% endblock %}

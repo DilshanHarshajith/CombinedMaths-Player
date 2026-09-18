@@ -1,0 +1,1272 @@
+/* Global Styles */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    color: #eee;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* Navigation */
+.navbar {
+    background: rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(10px);
+    padding: 1rem 2rem;
+    position: sticky;
+    top: 0;
+    z-index: 1000;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.nav-container {
+    max-width: 1600px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.nav-brand a {
+    color: #7ab;
+    text-decoration: none;
+    font-size: 1.5rem;
+    font-weight: bold;
+}
+
+.nav-links {
+    display: flex;
+    gap: 2rem;
+}
+
+.nav-links a {
+    color: #eee;
+    text-decoration: none;
+    transition: color 0.3s;
+}
+
+.nav-links a:hover {
+    color: #7ab;
+}
+
+/* Main Content */
+.main-content {
+    flex: 1;
+    max-width: 1600px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 2rem;
+}
+
+/* Footer */
+.footer {
+    background: rgba(0, 0, 0, 0.3);
+    text-align: center;
+    padding: 1rem;
+    margin-top: auto;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.footer p {
+    color: #888;
+    font-size: 0.9rem;
+}
+
+/* Buttons */
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.3s;
+}
+
+.btn-primary {
+    background: #7ab;
+    color: #1a1a2e;
+}
+
+.btn-primary:hover {
+    background: #6a9;
+    transform: translateY(-2px);
+}
+
+.btn-secondary {
+    background: rgba(122, 171, 187, 0.2);
+    color: #7ab;
+    border: 1px solid #7ab;
+}
+
+.btn-secondary:hover {
+    background: rgba(122, 171, 187, 0.3);
+}
+
+.btn-large {
+    padding: 1rem 2rem;
+    font-size: 1.2rem;
+}
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+}
+
+.btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.btn.download-btn:disabled {
+    opacity: 0.7;
+}
+
+/* Forms */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: #7ab;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #eee;
+    font-size: 1rem;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #7ab;
+}
+
+.form-group small {
+    display: block;
+    margin-top: 0.25rem;
+    color: #888;
+    font-size: 0.85rem;
+}
+
+/* Login Page */
+.login-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 60vh;
+}
+
+.login-box {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2.5rem;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 400px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.login-box h1 {
+    margin-bottom: 0.5rem;
+    color: #7ab;
+}
+
+.subtitle {
+    color: #888;
+    margin-bottom: 2rem;
+}
+
+.login-form {
+    margin-bottom: 1rem;
+}
+
+/* Home Page */
+.home-container {
+    text-align: center;
+}
+
+.hero-section {
+    padding: 4rem 0;
+}
+
+.hero-section h1 {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    color: #7ab;
+}
+
+.hero-subtitle {
+    font-size: 1.5rem;
+    color: #888;
+    margin-bottom: 2rem;
+}
+
+.action-buttons {
+    margin-top: 2rem;
+}
+
+.info-section {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 2rem;
+    margin-top: 4rem;
+}
+
+.info-card {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 2rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.info-card h3 {
+    margin-bottom: 1rem;
+    color: #7ab;
+}
+
+.info-card p {
+    color: #888;
+}
+
+/* Courses Page */
+.page-header {
+    margin-bottom: 2rem;
+}
+
+.page-header h1 {
+    color: #7ab;
+    margin-bottom: 0.5rem;
+}
+
+.back-link {
+    color: #7ab;
+    text-decoration: none;
+    display: inline-block;
+    margin-bottom: 1rem;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+.courses-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.course-card {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.course-info h3 {
+    margin-bottom: 0.5rem;
+    color: #eee;
+}
+
+.course-teacher {
+    color: #888;
+    margin-bottom: 1rem;
+}
+
+.course-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.badge {
+    background: rgba(122, 171, 187, 0.2);
+    color: #7ab;
+    padding: 0.25rem 0.75rem;
+    border-radius: 4px;
+    font-size: 0.85rem;
+}
+
+.badge-free {
+    background: rgba(76, 175, 80, 0.2);
+    color: #4caf50;
+}
+
+.badge-file {
+    background: rgba(255, 152, 0, 0.2);
+    color: #ff9800;
+}
+
+.status-active {
+    background: rgba(76, 175, 80, 0.2);
+    color: #4caf50;
+}
+
+.status-inactive {
+    background: rgba(244, 67, 54, 0.2);
+    color: #f44336;
+}
+
+/* Course Details Page */
+.lessons-container {
+    margin-top: 2rem;
+}
+
+.lessons-container h2 {
+    margin-bottom: 1.5rem;
+    color: #7ab;
+}
+
+.lessons-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.month-group {
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
+    padding: 1.5rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.month-header {
+    color: #7ab;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.month-lessons {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.25rem;
+}
+
+.lesson-item {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1.5rem;
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 160px;
+}
+
+.lesson-info h4 {
+    margin-bottom: 0.5rem;
+    color: #eee;
+    font-size: 1.05rem;
+    line-height: 1.4;
+}
+
+.lesson-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    color: #888;
+    font-size: 0.85rem;
+}
+
+.lesson-card-bottom {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: auto;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.lesson-card-bottom .watched-toggle {
+    flex-shrink: 0;
+}
+
+.lesson-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-left: auto;
+}
+
+/* Watched checkbox — course list */
+.watched-toggle {
+    display: flex;
+    align-items: center;
+    margin-right: 0.5rem;
+    cursor: pointer;
+}
+
+.watched-toggle input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: #7ab;
+}
+
+.lesson-item.watched {
+    opacity: 0.6;
+    border-color: rgba(76, 175, 80, 0.4);
+}
+
+.lesson-item.watched .lesson-info h4::after {
+    content: " ✓ Watched";
+    color: #4caf50;
+    font-size: 0.8rem;
+    font-weight: normal;
+}
+
+/* Watched checkbox — player page */
+.watched-toggle-player {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #888;
+    font-size: 0.9rem;
+    cursor: pointer;
+}
+
+.watched-toggle-player input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: #7ab;
+}
+
+/* Lesson Player Page */
+.player-container {
+    margin-top: 2rem;
+}
+
+.video-wrapper {
+    background: #000;
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    width: 80%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.video-player {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+}
+
+/* File viewer (PDFs, documents, images — non-video lessons) */
+.file-container {
+    margin-top: 2rem;
+}
+
+.file-viewer {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    width: 80%;
+    margin-left: auto;
+    margin-right: auto;
+    min-height: 480px;
+    position: relative;
+}
+
+.file-frame {
+    width: 100%;
+    height: 75vh;
+    min-height: 480px;
+    border: none;
+    display: block;
+    background: #fff;
+}
+
+.file-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #888;
+    background: #1a1a2e;
+    z-index: 1;
+}
+
+/* File tabs — shown only when a card has more than one attachment */
+.file-tabs {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 0.75rem;
+    width: 80%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.file-tab {
+    background: transparent;
+    border: none;
+    color: #ccc;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: color 0.2s ease;
+    white-space: nowrap;
+}
+
+.file-tab-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.9rem;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.05);
+    transition: all 0.2s ease;
+}
+
+.file-tab-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.file-tab-item.active {
+    background: #2b1d9c;
+    border-color: #2b1d9c;
+    color: #fff;
+}
+
+.file-tab-read {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+}
+
+.file-tab-read input[type="checkbox"] {
+    accent-color: #7ab;
+}
+
+.player-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1rem;
+    border-radius: 8px;
+}
+
+/* The file container's controls hold only the download button — with a
+   single child, space-between would park it on the left, so push it right. */
+#download-file-btn {
+    margin-left: auto;
+}
+
+/* Playback Speed Control */
+.speed-control {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #888;
+    font-size: 0.9rem;
+}
+
+/* Quality Control */
+.quality-control {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #888;
+    font-size: 0.9rem;
+}
+
+.quality-control label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #888;
+    margin-bottom: 0;
+}
+
+.quality-control select {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #eee;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    min-width: 120px;
+}
+
+.quality-control select:focus {
+    outline: none;
+    border-color: #7ab;
+}
+
+/* Quality Modal */
+.quality-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.quality-modal-content {
+    background: rgba(30, 30, 50, 0.95);
+    padding: 2rem;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    max-width: 400px;
+    width: 90%;
+    backdrop-filter: blur(10px);
+}
+
+.quality-modal-content h3 {
+    color: #7ab;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.quality-options {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+}
+
+.quality-option {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #eee;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 1rem;
+    text-align: left;
+}
+
+.quality-option:hover {
+    background: rgba(122, 171, 187, 0.2);
+    border-color: #7ab;
+    color: #7ab;
+}
+
+.quality-cancel {
+    width: 100%;
+    margin-top: 0.5rem;
+}
+
+.speed-control label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #888;
+    margin-bottom: 0;
+}
+
+.speed-control #speed-value {
+    color: #7ab;
+    font-weight: 600;
+    min-width: 3.2em;
+    display: inline-block;
+}
+
+.speed-control input[type="range"] {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 140px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.15);
+    outline: none;
+    cursor: pointer;
+}
+
+.speed-control input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: #7ab;
+    cursor: pointer;
+    transition: transform 0.15s;
+}
+
+.speed-control input[type="range"]::-webkit-slider-thumb:hover {
+    transform: scale(1.2);
+}
+
+.speed-control input[type="range"]::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border: none;
+    border-radius: 50%;
+    background: #7ab;
+    cursor: pointer;
+}
+
+/* Download Progress */
+.download-progress {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.progress-container {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: #7ab;
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 4px;
+}
+
+.progress-text {
+    font-size: 0.9rem;
+    color: #888;
+    text-align: center;
+}
+
+.progress-controls {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 0.5rem;
+}
+
+.btn-danger {
+    background: #f44336;
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #d32f2f;
+}
+
+/* Lesson menu progress bar */
+.lesson-progress {
+    margin-top: 0.75rem;
+    padding: 0.5rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.progress-bar-small {
+    width: 100%;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 0.25rem;
+}
+
+.progress-fill-small {
+    height: 100%;
+    background: #7ab;
+    width: 0%;
+    transition: width 0.3s ease;
+    border-radius: 3px;
+}
+
+.progress-text-small {
+    font-size: 0.8rem;
+    color: #888;
+    text-align: center;
+}
+
+.progress-controls-small {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    margin-top: 0.25rem;
+}
+
+.btn-xs {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+}
+
+/* Loading and Error States */
+.loading-spinner {
+    text-align: center;
+    padding: 3rem;
+}
+
+.spinner {
+    border: 4px solid rgba(255, 255, 255, 0.1);
+    border-top: 4px solid #7ab;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.error-message {
+    background: rgba(244, 67, 54, 0.2);
+    color: #f44336;
+    padding: 1rem;
+    border-radius: 8px;
+    margin: 1rem 0;
+}
+
+.hidden {
+    display: none;
+}
+
+/* Error Page */
+.error-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 60vh;
+}
+
+.error-box {
+    text-align: center;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 3rem;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.error-box h1 {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+.error-box .error-message {
+    margin-bottom: 2rem;
+}
+
+.filters-container {
+    margin-bottom: 2rem;
+    display: flex;
+    flex-direction: row;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 1.5rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    align-items: flex-start;
+}
+
+.filter-side {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    min-width: 160px;
+}
+
+.filter-side-right {
+    flex: 1 1 auto;
+    min-width: 240px;
+    align-items: flex-end;
+}
+
+.filter-row-dates {
+    justify-content: flex-end;
+}
+
+.filter-select {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #eee;
+    padding: 0.5rem 0.75rem;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    min-width: 140px;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: #2b1d9c;
+}
+
+.filter-select:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.filter-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.filter-chip {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #ccc;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.filter-chip:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.3);
+}
+
+.filter-chip.active {
+    background: #2b1d9c;
+    border-color: #2b1d9c;
+    color: #fff;
+}
+
+.filter-chip:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.filter-chip .has-content-icon {
+    color: #4ade80;
+    font-size: 0.8rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .nav-container {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .main-content {
+        padding: 1rem;
+    }
+    
+    .hero-section h1 {
+        font-size: 2rem;
+    }
+    
+    .hero-subtitle {
+        font-size: 1.2rem;
+    }
+    
+    .courses-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .month-lessons {
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    }
+
+    .lesson-item {
+        min-height: 140px;
+    }
+
+    .lesson-actions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .lesson-actions .btn {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .month-group {
+        padding: 1rem;
+    }
+    
+    .download-progress {
+        padding: 0.75rem;
+    }
+    
+    .progress-text {
+        font-size: 0.8rem;
+    }
+    
+    .lesson-progress {
+        padding: 0.5rem;
+    }
+    
+    .video-wrapper,
+    .file-viewer {
+        width: 100%;
+    }
+
+    .player-controls {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .speed-control {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .speed-control input[type="range"] {
+        flex: 1;
+        margin-left: 1rem;
+    }
+
+    .filters-container {
+        flex-direction: column;
+    }
+
+    .filter-side {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .filter-select {
+        width: 100%;
+    }
+    
+    .timestamps-container {
+        padding: 1rem;
+    }
+    
+    .timestamp-actions {
+        opacity: 1;
+    }
+    
+    .timestamp-modal-content {
+        padding: 1.5rem;
+    }
+}
+
+.badge-group {
+    background: rgba(43, 29, 156, 0.2);
+    color: #a395f5;
+    border: 1px solid rgba(43, 29, 156, 0.4);
+}
+
+/* Timestamp Styles */
+.timestamps-container {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.timestamps-container h3 {
+    color: #7ab;
+    margin-bottom: 1rem;
+}
+
+.timestamps-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.timestamp-item {
+    background: rgba(255, 255, 255, 0.05);
+    padding: 1rem;
+    border-radius: 8px;
+    border-left: 4px solid #7ab;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.timestamp-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    transform: translateX(4px);
+}
+
+.timestamp-time {
+    font-weight: 600;
+    font-size: 1.1rem;
+    margin-bottom: 0.25rem;
+}
+
+.timestamp-note {
+    color: #ccc;
+    font-size: 0.9rem;
+    margin-bottom: 0.5rem;
+}
+
+.timestamp-actions {
+    display: flex;
+    gap: 0.5rem;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.timestamp-item:hover .timestamp-actions {
+    opacity: 1;
+}
+
+/* Timestamp Modal */
+.timestamp-modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.7);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+}
+
+.timestamp-modal-content {
+    background: rgba(30, 30, 50, 0.95);
+    padding: 2rem;
+    border-radius: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    max-width: 400px;
+    width: 90%;
+    backdrop-filter: blur(10px);
+}
+
+.timestamp-modal-content h3 {
+    color: #7ab;
+    margin-bottom: 1.5rem;
+    text-align: center;
+}
+
+.timestamp-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.timestamp-form input[type="text"] {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: #eee;
+    padding: 0.75rem;
+    border-radius: 8px;
+    font-size: 1rem;
+}
+
+.timestamp-form input[type="text"]:focus {
+    outline: none;
+    border-color: #7ab;
+}
+
+.timestamp-form input[type="text"][readonly] {
+    background: rgba(255, 255, 255, 0.02);
+    cursor: default;
+}
+
+.timestamp-form input[type="color"] {
+    width: 100%;
+    height: 40px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 8px;
+    cursor: pointer;
+    background: transparent;
+}
+
+.timestamp-modal-buttons {
+    display: flex;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+}
+
+.timestamp-modal-buttons button {
+    flex: 1;
+}
+
+/* File download picker (multi-file cards) */
+.file-picker-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    max-height: 260px;
+    overflow-y: auto;
+    margin: 0.5rem 0 0.85rem;
+    padding-right: 0.25rem;
+}
+
+.file-picker-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    color: #ddd;
+    font-size: 0.92rem;
+    cursor: pointer;
+}
+
+.file-picker-item input[type="checkbox"] {
+    accent-color: #7ab;
+    width: 16px;
+    height: 16px;
+    flex-shrink: 0;
+}
+
+.file-picker-select-all {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #aaa;
+    font-size: 0.88rem;
+    cursor: pointer;
+    margin-bottom: 0.25rem;
+}
+
+.file-picker-select-all input[type="checkbox"] {
+    accent-color: #7ab;
+    width: 15px;
+    height: 15px;
+}

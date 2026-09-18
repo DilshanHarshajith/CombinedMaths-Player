@@ -1,0 +1,11 @@
+# VCS & caches.
+__pycache__/
+*.pyc
+
+# Docs/build artifacts.
+README.md
+
+# Ignore all dotfiles except for .env.example and .dockerignore
+.*
+!.env.example
+!.dockerignore
